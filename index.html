@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Cho Cục Cưng</title>
+    <style>
+        :root {
+            --primary-color: #ff6b81;
+            --bg-color: #fff5f6;
+            --text-color: #2f3542;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .quiz-container {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(255, 107, 129, 0.15);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+        h2 { color: var(--primary-color); margin-bottom: 20px; }
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+            background: #ffe6e9;
+            padding: 10px 15px;
+            border-radius: 10px;
+        }
+        .options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        button {
+            background-color: white;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 12px 20px;
+            font-size: 1em;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        button:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            box-sizing: border-box;
+            font-size: 1em;
+            margin-bottom: 15px;
+            outline: none;
+        }
+        input[type="text"]:focus { border-color: var(--primary-color); }
+        .alert-text {
+            color: #ff4757;
+            font-weight: bold;
+            margin-top: 15px;
+            min-height: 24px;
+        }
+        .result-text {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin: 20px 0;
+            color: var(--primary-color);
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container">
+    <!-- Màn hình câu hỏi -->
+    <div id="quiz-screen">
+        <h2 id="question-title">Câu hỏi</h2>
+        <div class="stats">
+            <span>Điểm: <span id="score-display">0</span>/10</span>
+            <span>Mạng còn lại: <span id="lives-display">3</span> ❤️</span>
+        </div>
+        <div id="input-area"></div>
+        <div class="alert-text" id="alert-display"></div>
+    </div>
+
+    <!-- Màn hình kết quả -->
+    <div id="result-screen" class="hidden">
+        <h2>Kết Quả Quiz</h2>
+        <p>Bạn đã hoàn thành 10 câu hỏi!</p>
+        <p>Tổng số điểm đạt được: <span id="final-score" style="font-weight: bold; color: var(--primary-color);">0</span>/10</p>
+        <div class="result-text" id="rank-comment"></div>
+        <h1 style="color: #ff4757; letter-spacing: 2px; animation: heartBeat 1s infinite;">MOAZ 💋</h1>
+    </div>
+</div>
+
+<script>
+const quizData = [
+    { type: 'input', q: 'Full name của anh là gì?', a: 'Trần Đình Thanh Tùng' },
+    { type: 'input', q: 'Sinh nhật của anh là ngày nào? (dd/m)', a: '15/1' },
+    { type: 'input', q: 'Tướng Liên Quân anh thích chơi nhất là gì?', a: 'Elsu' },
+    { type: 'input', q: 'Anh thích màu gì? (Gợi ý: 2 màu cách nhau bằng chữ "và")', a: 'trắng và đen' },
+    { type: 'input', q: 'Em iu anh đến mức nào từ 1 đến 10?', a: '100' },
+    { type: 'input', q: 'cc còn được gọi là gì?', a: 'cục cưng' },
+    { type: 'input', q: 'Ai gà hơn (Tùng hay Thảo)?', a: 'cả hai' },
+    { type: 'input', q: 'Ai bị đánh nhiều nhất trong mối quan hệ này?', a: 'Tùng' },
+    { type: 'input', q: '1 + 1 bằng mấy?', a: '2' },
+    { 
+        type: 'select', 
+        q: 'Em sẽ iu anh hiện tại, ngày mai... và trong tương lai chứ?', 
+        options: ['Có', 'Không', 'Ko biết'],
+        a: 'Có'
+    }
+];
+
+let currentQuestionIndex = 0;
+let score = 0;
+let lives = 3;
+
+const questionTitle = document.getElementById('question-title');
+const inputArea = document.getElementById('input-area');
+const alertDisplay = document.getElementById('alert-display');
+const scoreDisplay = document.getElementById('score-display');
+const livesDisplay = document.getElementById('lives-display');
+const quizScreen = document.getElementById('quiz-screen');
+const resultScreen = document.getElementById('result-screen');
+const finalScore = document.getElementById('final-score');
+const rankComment = document.getElementById('rank-comment');
+
+function loadQuestion() {
+    alertDisplay.innerText = '';
+    if (currentQuestionIndex >= quizData.length) {
+        showResults();
+        return;
+    }
+
+    const currentQuiz = quizData[currentQuestionIndex];
+    questionTitle.innerText = `Câu ${currentQuestionIndex + 1}: ${currentQuiz.q}`;
+    inputArea.innerHTML = '';
+
+    if (currentQuiz.type === 'input') {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.id = 'user-answer';
+        input.placeholder = 'Nhập câu trả lời tại đây...';
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') checkInputAnswer();
+        });
+
+        const btn = document.createElement('button');
+        btn.innerText = 'Gửi câu trả lời';
+        btn.style.width = '100%';
+        btn.onclick = checkInputAnswer;
+
+        inputArea.appendChild(input);
+        inputArea.appendChild(btn);
+        input.focus();
+    } else if (currentQuiz.type === 'select') {
+        const btnContainer = document.createElement('div');
+        btnContainer.className = 'options-container';
+
+        currentQuiz.options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.innerText = opt;
+            btn.onclick = () => checkSelectAnswer(opt);
+            btnContainer.appendChild(btn);
+        });
+        inputArea.appendChild(btnContainer);
+    }
+}
+
+function checkInputAnswer() {
+    const userAns = document.getElementById('user-answer').value.trim();
+    const correctAns = quizData[currentQuestionIndex].a;
+
+    // So sánh không phân biệt hoa thường để tránh bắt lỗi gõ chữ hoa chữ thường
+    if (userAns.toLowerCase() === correctAns.toLowerCase()) {
+        score++;
+        scoreDisplay.innerText = score;
+        currentQuestionIndex++;
+        lives = 3; // Reset lại 3 mạng cho câu tiếp theo
+        livesDisplay.innerText = lives;
+        loadQuestion();
+    } else {
+        reduceLife();
+    }
+}
+
+function checkSelectAnswer(selectedOption) {
+    if (selectedOption === 'Có') {
+        score++;
+        scoreDisplay.innerText = score;
+        currentQuestionIndex++;
+        showResults();
+    } else if (selectedOption === 'Không') {
+        alertDisplay.innerText = 'Có cc nha; anh biết lắm; no:)';
+        reduceLife();
+    } else if (selectedOption === 'Ko biết') {
+        alertDisplay.innerText = 'Có cc nha; anh biết lắm; no:)';
+        reduceLife();
+    }
+}
+
+function reduceLife() {
+    lives--;
+    livesDisplay.innerText = lives;
+    if (lives <= 0) {
+        alertDisplay.innerText = 'Hết mạng rồi! Chuyển sang câu tiếp theo nhé.';
+        setTimeout(() => {
+            currentQuestionIndex++;
+            lives = 3;
+            livesDisplay.innerText = lives;
+            loadQuestion();
+        }, 1500);
+    } else {
+        if(quizData[currentQuestionIndex].type === 'input') {
+            alertDisplay.innerText = `Sai rồi em ơi! Còn ${lives} mạng.`;
+        }
+    }
+}
+
+function showResults() {
+    quizScreen.classList.add('hidden');
+    resultScreen.classList.remove('hidden');
+    finalScore.innerText = score;
+
+    if (score >= 1 && score <= 4) {
+        rankComment.innerText = 'Cút 😒';
+    } else if (score >= 5 && score <= 7) {
+        rankComment.innerText = 'Biết quan tâm người iu ko? 🤔';
+    } else if (score >= 8 && score <= 10) {
+        rankComment.innerText = 'Wow , đồ ăn gian .. 😳❤️';
+    } else {
+        rankComment.innerText = 'Gàaaa 🐔';
+    }
+}
+
+// Khởi chạy câu hỏi đầu tiên khi tải trang
+loadQuestion();
+</script>
+
+</body>
+</html>
